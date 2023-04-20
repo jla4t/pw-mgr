@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import messagebox
+import json
 import random
 import string
 
@@ -22,12 +23,37 @@ def copy_to_clipboard(password):
     messagebox.showinfo('Password Generated', 'Password has been copied to clipboard.')
 
 
+# Searches file for existing password with website name
+def find_password():
+    website = website_entry.get()
+    try:
+        with open("data.json") as pw_list:
+            db = json.load(pw_list)
+            if website in db:
+                lookup_email = db[website]["email"]
+                lookup_pw = db[website]["password"]
+                messagebox.showinfo(title=website, message=f"Email/Username: {lookup_email}\nPassword:{lookup_pw}")
+
+    except FileNotFoundError:
+        messagebox.showinfo(message="There are currently no passwords stored. Please input one before searching. ")
+    else:
+        messagebox.showinfo(message="No information found for search parameters.")
+    finally:
+        website_entry.delete(0, END)
+
+
 # Confirm password and save to data file
 def add_password():
     website = website_entry.get()
     em_un = em_un_entry.get()
     password = pw_entry.get()
     confirm_save = None
+    new_pw = {
+        website: {
+            "email": em_un,
+            "password": password,
+        }
+    }
 
     if len(website) == 0 or len(password) == 0:
         messagebox.showinfo(title="Error", message="Please enter a value for the website and password fields. ")
@@ -36,8 +62,18 @@ def add_password():
         confirm_save = messagebox.askokcancel(title=website, message=f"You've entered:\nUsername: {em_un}\nPassword: {password}\nIs this correct?")
 
     if confirm_save:
-        with open("data.txt", "a") as data_file:
-            data_file.write(f"{website},{em_un},{password}\n")
+        try:
+            with open("data.json", "r") as pw_list:
+                data = json.load(pw_list)
+                data.update(new_pw)
+        except FileNotFoundError:
+            with open("data.json", "w") as pw_list:
+                json.dump(new_pw, pw_list, indent=4)
+        else:
+            data.update(new_pw)
+            with open("data.json", "w") as pw_list:
+                json.dump(new_pw, pw_list, indent=4)
+        finally:
             website_entry.delete(0, END)
             pw_entry.delete(0, END)
     else:
@@ -65,9 +101,12 @@ mid_left_lbl.grid(column=0, row=2)
 bot_left_lbl = Label(text="Password: ")
 bot_left_lbl.grid(column=0, row=3)
 
-website_entry = Entry(width=39)
-website_entry.grid(column=1, row=1, columnspan=2)
+website_entry = Entry(width=21)
+website_entry.grid(column=1, row=1, columnspan=1)
 website_entry.focus()
+
+pw_search = Button(text="Search", width=13, command=find_password)
+pw_search.grid(column=2, row=1)
 
 em_un_entry = Entry(width=39)
 em_un_entry.grid(column=1, row=2, columnspan=2)
